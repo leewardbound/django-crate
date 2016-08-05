@@ -8,6 +8,7 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
 
 
 class Author(models.Model):
+    id = models.CharField(max_length=1024, primary_key=True, blank=True)
     name = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):

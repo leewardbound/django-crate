@@ -15,12 +15,13 @@ def allow_model_meta(name):
 
 def refresh_model(model):
     from django.db import connections
-    cursor = connections[getattr(model._meta, 'in_db', 'default')].cursor()
-    cursor.execute("refresh table \"%s\"" % model._meta.db_table)
+    refresh_sql = "refresh table \"%s\"" % model._meta.db_table
+    #cursor = connections[getattr(model._meta, 'in_db', 'default')].cursor()
+    #cursor.execute()
+    model.objects.raw(refresh_sql)
 
 def wait_until_exists(get_qs, pk, timeout=5, increment=0.1):
     start = time.time()
-    find = None
     while time.time() < (start + timeout):
         qs = get_qs()
         refresh_model(qs.model)
@@ -29,3 +30,4 @@ def wait_until_exists(get_qs, pk, timeout=5, increment=0.1):
         except qs.model.DoesNotExist: pass
         time.sleep(increment)
     return get_qs()
+
