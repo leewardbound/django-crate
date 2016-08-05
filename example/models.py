@@ -17,7 +17,7 @@ class Author(models.Model):
 
 class Book(models.Model):
     id = models.CharField(max_length=1024, primary_key=True, blank=True)
-    author_id = models.CharField(max_length=255)
+    author = models.ForeignKey(Author)
     title = models.CharField(max_length=255, null=True, blank=True)
     description = models.CharField(max_length=255, null=True, blank=True)
     published = models.DateTimeField(default=datetime.now)
