@@ -1,7 +1,31 @@
 version: "2"
 services:
-    test:
-        build: .
+    test2.7:
+        build:
+            context: .
+            dockerfile: Dockerfile-test2.7
+        command: ./test.sh
+        links:
+            - test_crate
+        volumes:
+            - .:/src
+        restart: "never"
+        environment:
+            - DJANGO_TEST=1
+    test3.3:
+        build:
+            context: .
+            dockerfile: Dockerfile-test3.3
+        command: python manage.py test
+        links:
+            - test_crate
+        volumes:
+            - .:/src
+        restart: "never"
+    test3.5:
+        build:
+            context: .
+            dockerfile: Dockerfile-test3.5
         command: python manage.py test
         links:
             - test_crate
@@ -10,4 +34,5 @@ services:
         restart: "never"
     test_crate:
         image: crate/crate
-
+        expose:
+            - 4200

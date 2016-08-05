@@ -12,3 +12,7 @@ def allow_model_meta(name):
     if not name in options.DEFAULT_NAMES:
         options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('name',)
 
+def refresh_model(model):
+    from django.db import connections
+    cursor = connections[getattr(model._meta, 'in_db', 'default')].cursor()
+    cursor.execute("refresh table \"%s\"" % model._meta.db_table)
