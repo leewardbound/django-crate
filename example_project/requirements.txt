@@ -1,8 +1,9 @@
 django==1.9.1
+
 crate==0.12
 crash==0.10.2
-
 python-dateutil
+
 django_extensions
 Werkzeug
 pytz
