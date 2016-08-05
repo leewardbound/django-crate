@@ -4,14 +4,27 @@ from datetime import datetime
 
 
 import django.db.models.options as options
-if not 'in_db' in options.DEFAULT_NAMES:
-    options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
+
+
+class Author(models.Model):
+    name = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+    class Meta:
+        in_db = 'crate'
 
 class Book(models.Model):
     id = models.CharField(max_length=1024, primary_key=True, blank=True)
+    author_id = models.CharField(max_length=255)
     title = models.CharField(max_length=255, null=True, blank=True)
     description = models.CharField(max_length=255, null=True, blank=True)
     published = models.DateTimeField(default=datetime.now)
-    class Meta:
-        in_db = 'local_crate'
+    pages = models.PositiveIntegerField(null=True, blank=True)
 
+    def __str__(self):
+        return '%s by %s'%(self.title, self.author)
+
+    class Meta:
+        in_db = 'crate'

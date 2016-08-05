@@ -15,8 +15,11 @@ import os
 import sys
 import logging
 
-IS_TEST = ('nosetests' in sys.argv[0] or 'test' in sys.argv or 'test_shell' in
-           sys.argv)
+IS_TEST = ('nosetests' in sys.argv[0] or
+           'test' in sys.argv or
+           'test_shell' in sys.argv or
+           os.environ.get('DJANGO_TEST', '').lower() in ['1', 'true', 'yes']
+           )
 
 def load_conf(cfg):
     try:
