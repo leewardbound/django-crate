@@ -1,0 +1,13 @@
+version: "2"
+services:
+    test:
+        build: .
+        command: python manage.py test
+        links:
+            - test_crate
+        volumes:
+            - .:/src
+        restart: "never"
+    test_crate:
+        image: crate/crate
+

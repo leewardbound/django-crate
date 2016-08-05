@@ -154,7 +154,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         """not supported"""
         return []
 
-    def _create_test_db(self, verbosity, autoclobber):
+    def _create_test_db(self, verbosity, autoclobber, keepdb):
         """cannot create dbs yet"""
         return ""
 

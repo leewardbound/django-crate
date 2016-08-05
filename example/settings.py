@@ -9,8 +9,20 @@ https://docs.djangoproject.com/en/1.9/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.9/ref/settings/
 """
-
+from __future__ import absolute_import
+import __builtin__
 import os
+import sys
+import logging
+
+IS_TEST = ('nosetests' in sys.argv[0] or 'test' in sys.argv or 'test_shell' in
+           sys.argv)
+
+def load_conf(cfg):
+    try:
+        __builtin__.__import__('%s' % cfg, globals(), locals(), ['*'], -1)
+    except ImportError as e:
+        log.warning('Not importing %s settings: %s'%(cfg, e))
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,7 +51,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_extensions',
     'example',
-    'emails',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -82,17 +93,13 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     },
-    'local_crate': {
+    'crate': {
         'ENGINE': 'django_crate.backend',
         'SERVERS': ['localhost:4200',],
     },
-    'emails': {
-        'ENGINE': 'django_crate.backend',
-        'SERVERS': ['localhost:4200',],
-    }
 }
 
-DATABASE_ROUTERS = ['example.routers.ModelDatabaseRouter']
+DATABASE_ROUTERS = ['django_crate.routers.ModelMetaOptionRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
@@ -131,10 +138,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
-import logging
 l = logging.getLogger('django.db.backends')
 l.setLevel(logging.DEBUG)
 l.addHandler(logging.StreamHandler())
 
-
-EMAIL_DATA_PATH = '/home/linked/send_data'
+if IS_TEST:
+    try: from .test_settings import *
+    except ImportError as e: print('Not importing extra test settings... ',e)
+    print('TEST MODE DEFAULTS, disabling unneeded plugins')

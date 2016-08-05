@@ -4,7 +4,8 @@ from datetime import datetime
 
 
 import django.db.models.options as options
-options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
+if not 'in_db' in options.DEFAULT_NAMES:
+    options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
 
 class Book(models.Model):
     id = models.CharField(max_length=1024, primary_key=True, blank=True)

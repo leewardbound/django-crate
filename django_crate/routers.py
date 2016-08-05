@@ -1,4 +1,7 @@
-class ModelDatabaseRouter(object):
+import django.db.models.options as options
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
+
+class ModelMetaOptionRouter(object):
     """Allows each model to set its own destiny"""
     def db_for_read(self, model, **hints):
         return getattr(model._meta, 'in_db', None)
