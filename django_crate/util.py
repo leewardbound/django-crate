@@ -14,5 +14,10 @@ def allow_model_meta(name):
 
 def refresh_model(model):
     from django.db import connections
-    cursor = connections[getattr(model._meta, 'in_db', 'default')].cursor()
-    cursor.execute("refresh table \"%s\"" % model._meta.db_table)
+    refresh_sql = "refresh table \"%s\"" % model._meta.db_table
+    #cursor = connections[getattr(model._meta, 'in_db', 'default')].cursor()
+    #cursor.execute()
+    model.objects.raw(refresh_sql)
+    import time
+    time.sleep(2)
+
