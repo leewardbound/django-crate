@@ -4,6 +4,7 @@ from django_crate.util import milliseconds
 from django.conf import settings
 from django.utils import timezone, six
 from datetime import datetime
+from dateutil import parser
 import pytz
 
 class DatabaseOperations(BaseDatabaseOperations):
@@ -100,7 +101,12 @@ class DatabaseOperations(BaseDatabaseOperations):
         return converters
 
     def convert_datetimefield_value(self, value, expression, connection, context):
-        if value is not None:
+        if value:
+            if(isinstance(value, (str, unicode))):
+                try:
+                    value = int(value)
+                except:
+                    value = parser.parse(value)
             if(isinstance(value, int)):
                 value = datetime.utcfromtimestamp(value / 1e3)
             if not settings.USE_TZ:

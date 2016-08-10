@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(name='django_crate',
       version='0.1.33',
@@ -11,6 +11,7 @@ setup(name='django_crate',
       install_requires=[
           'crate==0.12',
           'crash==0.10.2',
+          'python-dateutil',
       ],
       packages=['django_crate',],
      )
