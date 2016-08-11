@@ -13,7 +13,8 @@ class ModelMetaOptionRouter(object):
         from django.apps import apps
         if not model_name:
             return True
-        model = apps.get_model(app_label, model_name)
+        try: model = apps.get_model(app_label, model_name)
+        except LookupError: return False
         # Specify target database with field in_db in model's Meta class
         if hasattr(model._meta, 'in_db'):
             if model._meta.in_db == db:
