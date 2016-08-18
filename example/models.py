@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 from django.db import models
 from datetime import datetime
+from django_crate.fields import ObjectField, StringArrayField
 
 
 import django.db.models.options as options
@@ -23,6 +24,8 @@ class Book(models.Model):
     description = models.CharField(max_length=255, null=True, blank=True)
     published = models.DateTimeField(default=datetime.now)
     pages = models.PositiveIntegerField(null=True, blank=True)
+    extra = ObjectField()
+    tags = StringArrayField()
 
     def __str__(self):
         return '%s by %s'%(self.title, self.author)

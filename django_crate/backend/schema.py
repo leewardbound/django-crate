@@ -9,6 +9,8 @@ TYPES = DatabaseCreation.data_types
 class CrateSchemaEditor(BaseDatabaseSchemaEditor):
     sql_delete_table = "DROP TABLE %(table)s"
     sql_create_table = "CREATE TABLE %(table)s (%(definition)s) %(partitioned)s %(clustering)s %(table_settings)s"
+    sql_create_index = None
+    sql_delete_index = None
 
     def column_sql(self, model, field, include_default=False):
         # Get the column's type and use that as the basis of the SQL
@@ -77,16 +79,7 @@ class CrateSchemaEditor(BaseDatabaseSchemaEditor):
             if col_type_suffix:
                 definition += " %s" % col_type_suffix
             params.extend(extra_params)
-            # Indexes
-            if field.db_index and not field.unique:
-                self.deferred_sql.append(
-                    self.sql_create_index % {
-                        "name": self._create_index_name(model, [field.column], suffix=""),
-                        "table": self.quote_name(model._meta.db_table),
-                        "columns": self.quote_name(field.column),
-                        "extra": "",
-                    }
-                )
+
             # FK
             """NOT SUPPORTED
 

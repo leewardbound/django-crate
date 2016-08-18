@@ -149,3 +149,16 @@ if IS_TEST:
     try: from .test_settings import *
     except ImportError as e: print('Not importing extra test settings... ',e)
     print('TEST MODE DEFAULTS, disabling unneeded plugins')
+LOGGING = {
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+        }
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO'
+    }
+}

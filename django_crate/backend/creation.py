@@ -12,6 +12,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         #'DateField':                    'timestamp',
         'DateTimeField':                'timestamp',
         #'DecimalField':                 'decimal',
+        'ForeignKey':                    'string',
         'FileField':                    'string',
         'FilePathField':                'string',
         'FloatField':                   'float',
@@ -26,6 +27,7 @@ class DatabaseCreation(BaseDatabaseCreation):
         'SlugField':                    'string',
         'SmallIntegerField':            'short',
         'TextField':                    'string',
+        'ObjectField':                  'object',
         #'TimeField':                    'long',
     }
 
