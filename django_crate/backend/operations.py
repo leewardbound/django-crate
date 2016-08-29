@@ -62,6 +62,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         ]
 
     def adapt_datetimefield_value(self, value):
+        if not value: return None
         if timezone.is_aware(value):
             if settings.USE_TZ:
                 value = timezone.make_naive(value, self.connection.timezone)
@@ -102,7 +103,7 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def convert_datetimefield_value(self, value, expression, connection, context):
         if value:
-            if(isinstance(value, (str, unicode))):
+            if(isinstance(value, six.string_types)):
                 try:
                     value = int(value)
                 except:
