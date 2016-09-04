@@ -5,6 +5,8 @@ class ObjectField(models.Field):
         return 'object'
     def get_internal_type(self):
         return 'ObjectField'
+    def get_prep_value(self, value):
+        return value or {}
     def from_db_value(self, value, expression, connection, context):
         return value or {}
     def to_python(self, value):
@@ -16,6 +18,23 @@ class StringArrayField(models.Field):
         return 'array(string)'
     def get_internal_type(self):
         return 'StringArrayField'
+    def get_prep_value(self, value):
+        return value or []
+    def from_db_value(self, value, expression, connection, context):
+        return value or []
+    def to_python(self, value):
+        if not isinstance(value, list): raise self.ValidationError
+        for v in value:
+            if not isinstance(v, list): raise self.ValidationError
+        return value or []
+
+class ObjectArrayField(models.Field):
+    def db_type(self, connection):
+        return 'array(object)'
+    def get_internal_type(self):
+        return 'ObjectArrayField'
+    def get_prep_value(self, value):
+        return value or []
     def from_db_value(self, value, expression, connection, context):
         return value or []
     def to_python(self, value):
