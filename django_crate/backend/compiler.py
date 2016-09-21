@@ -31,6 +31,11 @@ class SQLCompiler(CrateParameterMixin, compiler.SQLCompiler):
                     converters[i] = (backend_converters + field_converters, expression)
         return converters
 
+    def as_sql(self):
+        sql = super(SQLCompiler, self).as_sql()
+        print(sql)
+        return sql
+
 
 class SQLInsertCompiler(CrateParameterMixin, compiler.SQLInsertCompiler):
     def prepare_value(self, field, value):
