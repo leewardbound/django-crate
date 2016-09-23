@@ -33,7 +33,6 @@ class SQLCompiler(CrateParameterMixin, compiler.SQLCompiler):
 
     def as_sql(self):
         sql = super(SQLCompiler, self).as_sql()
-        print(sql)
         return sql
 
 
