@@ -160,5 +160,9 @@ class DatabaseCreation(BaseDatabaseCreation):
         """cannot create dbs yet"""
         return ""
 
+    def _clone_test_db(self, verbosity, autoclobber, keepdb=False):
+        """cannot create dbs yet"""
+        return ""
+
     def _destroy_test_db(self, test_database_name, verbosity):
         """cannot destroy dbs yet"""

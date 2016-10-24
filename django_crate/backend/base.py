@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from crate.client.connection import Connection
-import crate.client.exceptions as Database
 from crate.client.cursor import Cursor
 from django.db.backends.base.features import BaseDatabaseFeatures
 from django.db.backends.base.base import BaseDatabaseWrapper
@@ -10,7 +9,14 @@ from .operations import DatabaseOperations
 from .creation import DatabaseCreation
 from .introspection import DatabaseIntrospection
 from .validation import DatabaseValidation
+from django.db.backends.postgresql.base import DatabaseWrapper as PSQLDatabaseWrapper
 
+try:
+    import psycopg2 as Database
+    import psycopg2.extensions
+    import psycopg2.extras
+except ImportError as e:
+    raise ImproperlyConfigured("Error loading psycopg2 module: %s" % e)
 
 class DatabaseFeatures(BaseDatabaseFeatures):
     # Does the backend distinguish between '' and None?
@@ -137,50 +143,48 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'istartswith': 'LIKE %s',
         'iendswith': 'LIKE %s',
     }
-
     Database = Database
+
+    SchemaEditorClass = CrateSchemaEditor
+    client_class = DatabaseClient
+    creation_class = DatabaseCreation
+    features_class = DatabaseFeatures
+    introspection_class = DatabaseIntrospection
+    ops_class = DatabaseOperations
+    validation_class = DatabaseValidation
 
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
-
-        self.features = DatabaseFeatures(self)
-        self.ops = DatabaseOperations(self)
-        self.client = DatabaseClient(self)
-        self.creation = DatabaseCreation(self)
-        self.introspection = DatabaseIntrospection(self)
-        self.validation = DatabaseValidation(self)
-
-    ### CREATING CONNECTIONS AND CURSORS
+        self.client = self.client_class(self)
+        self.creation = self.creation_class(self)
+        self.features = self.features_class(self)
+        self.introspection = self.introspection_class(self)
+        self.ops = self.ops_class(self)
+        self.validation = self.validation_class(self)
 
     def get_connection_params(self):
-        """Returns a dict of parameters suitable for get_new_connection."""
-        servers = self.settings_dict.get("SERVERS", ["localhost:4200"])
-        timeout = self.settings_dict.get("TIMEOUT", None)
-        return {
-            "servers": servers,
-            "timeout": timeout
+        settings_dict = self.settings_dict
+        conn_params = {
         }
-
-    def get_new_connection(self, conn_params):
-        """Opens a connection to the database."""
-        conn = Connection(**conn_params)
-        return conn
-
-    def init_connection_state(self):
-        """Initializes the database connection settings."""
-        pass
+        conn_params.update(settings_dict['OPTIONS'])
+        conn_params.pop('isolation_level', None)
+        conn_params['database'] = settings_dict['NAME'] or 'doc'
+        if settings_dict['HOST']:
+            conn_params['host'] = settings_dict['HOST']
+        if settings_dict['PORT']:
+            conn_params['port'] = settings_dict['PORT']
+        return conn_params
 
     def create_cursor(self):
-        """Creates a cursor. Assumes that a connection is established."""
-        return self.connection.cursor()
+        cursor = self.connection.cursor()
+        return cursor
 
-    def is_usable(self):
-        try:
-            self.connection.client._json_request("GET", "/")
-        except:
-            return False
-        else:
-            return True
+    def init_connection_state(self):
+        self.connection.set_client_encoding('UTF8')
+
+    def get_new_connection(self, conn_params):
+        connection = Database.connect(**conn_params)
+        return connection
 
     def schema_editor(self, *args, **kwargs):
         return CrateSchemaEditor(self, *args, **kwargs)

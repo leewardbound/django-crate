@@ -20,14 +20,19 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
 
     def get_table_list(self, cursor):
         tables = []
+        db = self.connection.settings_dict['NAME'] or 'doc'
         cursor.execute(
             "select table_name from information_schema.tables "
-            "where schema_name='doc' order by table_name")
+            "where schema_name='%s' order by table_name"%db)
         for table_name in cursor.fetchall():
             if isinstance(table_name, list):
                 table_name = table_name[0]
             tables.append(table_name)
         return [TableInfo(t, 't') for t in tables]
+
+    def table_names(self, cursor):
+        output = super(DatabaseIntrospection, self).table_names(cursor)
+        return [isinstance(o, tuple) and o[0] or o for o in output]
 
     def sequence_list(self):
         """sequences not supported"""

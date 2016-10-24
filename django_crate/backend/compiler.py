@@ -69,7 +69,16 @@ class SQLDeleteCompiler(CrateParameterMixin, compiler.SQLDeleteCompiler):
 
 
 class SQLUpdateCompiler(CrateParameterMixin, compiler.SQLUpdateCompiler):
-    pass
+    def as_sql(self):
+        opts = self.query.get_meta()
+        pk_field = opts.pk
+        omit_updates = getattr(self.query.model, '__omit_update__', [])
+
+        self.query.values = [(f, o, v) for (f, o, v) in self.query.values
+                            if f.name not in omit_updates]
+        if omit_updates: raise
+
+        return super(SQLUpdateCompiler, self).as_sql()
 
 
 class SQLAggregateCompiler(CrateParameterMixin, compiler.SQLAggregateCompiler):
