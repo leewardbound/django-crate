@@ -7,20 +7,9 @@ from .creation import DatabaseCreation
 TYPES = DatabaseCreation.data_types
 import uuid
 import time as time_lib
+import json
 
-
-class CrateParameterMixin(object):
-    def as_sql(self, **kwargs):
-        result = super(CrateParameterMixin, self).as_sql(**kwargs)
-
-        if isinstance(result, list):
-            sql, params = result[0]
-            return [(sql.replace("%s", "?"), params)]
-        else:
-            return result[0].replace("%s", "?"), result[1]
-
-
-class SQLCompiler(CrateParameterMixin, compiler.SQLCompiler):
+class SQLCompiler(compiler.SQLCompiler):
     def get_converters(self, expressions):
         converters = {}
         for i, expression in enumerate(expressions):
@@ -31,12 +20,15 @@ class SQLCompiler(CrateParameterMixin, compiler.SQLCompiler):
                     converters[i] = (backend_converters + field_converters, expression)
         return converters
 
+    def execute_sql(self, *args, **kwargs):
+        return super(SQLCompiler, self).execute_sql(*args, **kwargs)
+
     def as_sql(self):
         sql = super(SQLCompiler, self).as_sql()
         return sql
 
 
-class SQLInsertCompiler(CrateParameterMixin, compiler.SQLInsertCompiler):
+class SQLInsertCompiler(compiler.SQLInsertCompiler):
     def prepare_value(self, field, value):
         opts = self.query.get_meta()
         pk_field = opts.pk
@@ -49,11 +41,6 @@ class SQLInsertCompiler(CrateParameterMixin, compiler.SQLInsertCompiler):
             else:
                 raise Exception("Can't autopopulate primary key for type %s on "%(_type, field.model))
 
-        if isinstance(value, (datetime, time, date)):
-            if(hasattr(value, 'timestamp')):
-                return int(value.timestamp() * 1000)
-            else:
-                return milliseconds(value)
         return super(SQLInsertCompiler, self).prepare_value(field, value)
 
     def as_sql(self):
@@ -62,13 +49,14 @@ class SQLInsertCompiler(CrateParameterMixin, compiler.SQLInsertCompiler):
         if not self.query.fields: self.query.fields = []
         if not pk_field in self.query.fields:
             self.query.fields.append(pk_field)
-        return super(SQLInsertCompiler, self).as_sql()
+        sql = super(SQLInsertCompiler, self).as_sql()
+        return sql
 
-class SQLDeleteCompiler(CrateParameterMixin, compiler.SQLDeleteCompiler):
+class SQLDeleteCompiler(compiler.SQLDeleteCompiler):
     pass
 
 
-class SQLUpdateCompiler(CrateParameterMixin, compiler.SQLUpdateCompiler):
+class SQLUpdateCompiler(compiler.SQLUpdateCompiler):
     def as_sql(self):
         opts = self.query.get_meta()
         pk_field = opts.pk
@@ -81,5 +69,5 @@ class SQLUpdateCompiler(CrateParameterMixin, compiler.SQLUpdateCompiler):
         return super(SQLUpdateCompiler, self).as_sql()
 
 
-class SQLAggregateCompiler(CrateParameterMixin, compiler.SQLAggregateCompiler):
+class SQLAggregateCompiler(compiler.SQLAggregateCompiler):
     pass

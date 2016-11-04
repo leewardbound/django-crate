@@ -91,8 +91,6 @@ class DatabaseOperations(BaseDatabaseOperations):
     def get_db_converters(self, expression):
         converters = super(DatabaseOperations, self).get_db_converters(expression)
         internal_type = expression.output_field.get_internal_type()
-        #if internal_type == 'TextField':
-        #    converters.append(self.convert_textfield_value)
         #elif internal_type in ['BooleanField', 'NullBooleanField']:
         #    converters.append(self.convert_booleanfield_value)
         if internal_type == 'DateTimeField':
@@ -100,6 +98,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         #elif internal_type == 'UUIDField':
         #    converters.append(self.convert_uuidfield_value)
         return converters
+
 
     def convert_datetimefield_value(self, value, expression, connection, context):
         if value:
@@ -110,8 +109,9 @@ class DatabaseOperations(BaseDatabaseOperations):
                     value = parser.parse(value)
             if(isinstance(value, int)):
                 value = datetime.utcfromtimestamp(value / 1e3)
-            if not settings.USE_TZ:
-                value = value.replace(tzinfo=None)
-            else:
+            # TODO Is this right? Needs tests for USE_TZ = true and false,
+            # datetime aware and naive, storage and retrieval
+            value = value.replace(tzinfo=None)
+            if settings.USE_TZ:
                 value = self.connection.timezone.localize(value)
         return value

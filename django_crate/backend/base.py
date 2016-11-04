@@ -10,6 +10,7 @@ from .creation import DatabaseCreation
 from .introspection import DatabaseIntrospection
 from .validation import DatabaseValidation
 from django.db.backends.postgresql.base import DatabaseWrapper as PSQLDatabaseWrapper
+import json
 
 try:
     import psycopg2 as Database
@@ -210,3 +211,17 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def rollback(self):
         pass
+
+
+def adapt_dict(val):
+    as_crate = '{%s}'%', '.join(
+            '"%s" = %s'%(str(psycopg2.extensions.adapt(k))[1:-1], psycopg2.extensions.adapt(v))
+        for k, v in val.items()
+    )
+    return psycopg2.extensions.AsIs(as_crate)
+psycopg2.extensions.register_adapter(dict, adapt_dict)
+
+def adapt_list(val):
+    as_crate = '[%s]'%', '.join(str(psycopg2.extensions.adapt(v)) for v in val)
+    return psycopg2.extensions.AsIs(as_crate)
+psycopg2.extensions.register_adapter(list, adapt_list)
