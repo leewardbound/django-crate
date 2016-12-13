@@ -1,8 +1,8 @@
 django==1.9.1
 
-crate==0.12
-crash==0.10.2
+crash
 python-dateutil
+psycopg2
 
 django_extensions
 Werkzeug

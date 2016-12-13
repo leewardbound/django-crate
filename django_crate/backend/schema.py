@@ -1,14 +1,16 @@
 # -*- coding: utf-8; -*-
+import time
 from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 from django.utils import six
 from django.utils.text import force_text
 from .creation import DatabaseCreation
-import time
 TYPES = DatabaseCreation.data_types
 
-class CrateSchemaEditor(BaseDatabaseSchemaEditor):
+
+class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
+
+    sql_create_table = "CREATE TABLE %(table)s (%(definition)s) %(partitioned_by)s %(clustered_by)s %(settings)s"
     sql_delete_table = "DROP TABLE %(table)s"
-    sql_create_table = "CREATE TABLE %(table)s (%(definition)s) %(partitioned)s %(clustering)s %(table_settings)s"
     sql_create_index = None
     sql_delete_index = None
 
@@ -22,22 +24,33 @@ class CrateSchemaEditor(BaseDatabaseSchemaEditor):
             # TODO: handle compound indices here?
             return None, None
 
-        fulltext_index = getattr(field, 'fulltext_index', None)
-        analyzer = getattr(field, 'analyzer', None)
+        # Work out nullability
+        null = field.null
+        if null and not self.connection.features.implied_column_null:
+            # Not supported by CrateDB
+            pass
+        elif not null:
+            sql += " NOT NULL"
 
+        # Primary key/unique outputs
         if field.primary_key:
-           sql += " PRIMARY KEY"
-        elif fulltext_index:
+            sql += " PRIMARY KEY"
+        elif field.unique:
+            # Not supported by CrateDB
+            pass
+
+        fulltext_index = getattr(field, 'fulltext_index', None)
+        if fulltext_index:
             if fulltext_index.lower() == 'off':
                 sql += " INDEX OFF"
             elif fulltext_index.lower() == "fulltext":
-                sql += " INDEX USING %s".format(fulltext_index.lower())
+                sql += " INDEX USING {}".format(fulltext_index.upper())
+                analyzer = getattr(field, 'analyzer', None)
                 if analyzer is not None:
-                    sql += " with (analyzer=%s)"
+                    sql += " WITH (analyzer=?)"
                     params.append(analyzer)
-            else:
-                # can only be 'plain'
-                sql += " INDEX USING %s" % fulltext_index.lower()
+            elif fulltext_index.lower() == "plain":
+                sql += " INDEX USING {}".format(fulltext_index.upper())
 
         return sql, params
 
@@ -69,120 +82,66 @@ class CrateSchemaEditor(BaseDatabaseSchemaEditor):
             definition, extra_params = self.column_sql(model, field)
             if definition is None:
                 continue
-            # Check constraints can go on the column SQL here
-            db_params = field.db_parameters(connection=self.connection)
-            if db_params['check']:
-                definition += " CHECK (%s)" % db_params['check']
 
-            # Autoincrement SQL (for backends with inline variant)
-            col_type_suffix = field.db_type_suffix(connection=self.connection)
-            if col_type_suffix:
-                definition += " %s" % col_type_suffix
-            params.extend(extra_params)
-
-            # FK
-            """NOT SUPPORTED
-
-            if field.rel and field.db_constraint:
-                to_table = field.rel.to._meta.db_table
-                to_column = field.rel.to._meta.get_field(field.rel.field_name).column
-                if self.connection.features.supports_foreign_keys:
-                    self.deferred_sql.append(
-                        self.sql_create_fk % {
-                            "name": self._create_index_name(model, [field.column], suffix="_fk_%s_%s" % (to_table, to_column)),
-                            "table": self.quote_name(model._meta.db_table),
-                            "column": self.quote_name(field.column),
-                            "to_table": self.quote_name(to_table),
-                            "to_column": self.quote_name(to_column),
-                        }
-                    )
-                elif self.sql_create_inline_fk:
-                    definition += " " + self.sql_create_inline_fk % {
-                        "to_table": self.quote_name(to_table),
-                        "to_column": self.quote_name(to_column),
-                    }
-            """
             # Add the SQL to our big list
             column_sqls.append("%s %s" % (
                 self.quote_name(field.column),
                 definition,
             ))
-            """NOT SUPPORTED
-            # Autoincrement SQL (for backends with post table definition variant)
-            if field.get_internal_type() == "AutoField":
-                autoinc_sql = self.connection.ops.autoinc_sql(model._meta.db_table, field.column)
-                if autoinc_sql:
-                    self.deferred_sql.extend(autoinc_sql)
-            """
 
-        # CRATE OPTIONS
-        clustered_by = getattr(model._meta, "clustered_by", None)
-        number_of_shards = getattr(model._meta, "number_of_shards", None)
-        clustering = ""
-        if clustered_by or number_of_shards:
-            clustering = " CLUSTERED"
-            if clustered_by:
-                clustering += " BY ({0})".format(self.quote_name(clustered_by))
-            if number_of_shards:
-                clustering += " INTO {0} SHARDS".format(number_of_shards)
-
-        partitioned = ""
-        partitioned_by = getattr(model._meta, "partitioned_by", [])
-        if partitioned_by:
-            partitioned = " PARTITIONED BY ({0})".format(
-                ", ".join((self.quote_name(partition) for partition in partitioned_by))
-            )
-
-        number_of_replicas = getattr(model._meta, "number_of_replicas", None)  # TODO: move to global default
-        refresh_interval = getattr(model._meta, "refresh_interval", None)
-        table_settings = ""
-        if number_of_replicas or refresh_interval:
-            table_settings = "WITH ("
-            table_settings += "number_of_replicas=?"
-            params.append(number_of_replicas)
-            table_settings += ", refresh_interval=?"
-            params.append(refresh_interval)
-            table_settings += ")"
-
-
+        # Make the table
         sql = self.sql_create_table % {
             "table": self.quote_name(model._meta.db_table),
             "definition": ", ".join(column_sqls),
-            "clustering": clustering,
-            "partitioned": partitioned,
-            "table_settings": table_settings
+            "clustered_by": self._clustered_by_sql(model, params),
+            "partitioned_by": self._partitioned_by_sql(model, params),
+            "settings": self._table_settings_sql(model, params),
         }
 
-        self.execute(sql, params)
+        # Prevent using [] as params, in the case a literal '%' is used in the definition
+        self.execute(sql, params or None)
+        # wait for shards to start
+        # let's do this optimistically ...
+        time.sleep(2)
 
-        retries = 5
-        while retries > 0:
-            # wait for table to be ready
-            try:
-                self.execute("select * from %s " % self.quote_name(model._meta.db_table))
-            except Exception as e:
-                time.sleep(.5)
-                retries -= 1
-            else:
-                break
-        """NOT SUPPORTED
-        # Add any index_togethers
-        for fields in model._meta.index_together:
-            columns = [model._meta.get_field_by_name(field)[0].column for field in fields]
-            self.execute(self.sql_create_index % {
-                "table": self.quote_name(model._meta.db_table),
-                "name": self._create_index_name(model, columns, suffix="_idx"),
-                "columns": ", ".join(self.quote_name(column) for column in columns),
-                "extra": "",
-            })
-        # Make M2M tables
-        for field in model._meta.local^_many_to_many:
-            if field.rel.through._meta.auto_created:
-                self.create_model(field.rel.through)
-        """
+    def _clustered_by_sql(self, model, params):
+        clustered_by = getattr(model._meta, "clustered_by", None)
+        number_of_shards = getattr(model._meta, "number_of_shards", None)
+        sql = ''
+        if clustered_by or number_of_shards:
+            clustering = ' CLUSTERED'
+            if clustered_by:
+                sql += " BY ({})".format(self.quote_name(clustered_by))
+            if number_of_shards:
+                sql += " INTO {} SHARDS".format(number_of_shards)
+        return sql
+
+    def _partitioned_by_sql(self, model, params):
+        partitioned_by = getattr(model._meta, "partitioned_by", None)
+        if partitioned_by:
+            return " PARTITIONED BY ({})".format(
+                ", ".join((self.quote_name(p) for p in partitioned_by))
+            )
+        return ''
+
+    def _table_settings_sql(self, model, params):
+        number_of_replicas = getattr(model._meta, "number_of_replicas", None)
+        refresh_interval = getattr(model._meta, "refresh_interval", None)
+        table_settings = []
+
+        if number_of_replicas is not None:
+            table_settings.append("number_of_replicas=?")
+            params.append(number_of_replicas)
+        if refresh_interval is not None:
+            table_settings.append("refresh_interval=?'")
+            params.append(refresh_interval)
+
+        if table_settings:
+            return " WITH (" + ", ".join(table_settings) + ")"
+        return ''
 
     def delete_model(self, model):
-        super(CrateSchemaEditor, self).delete_model(model)
+        super(DatabaseSchemaEditor, self).delete_model(model)
 
     def alter_db_table(self, model, old_db_table, new_db_table):
         raise NotImplementedError("cannot change the table name")
@@ -191,7 +150,7 @@ class CrateSchemaEditor(BaseDatabaseSchemaEditor):
         raise NotImplementedError("no tablespace support in crate")
 
     def add_field(self, model, field):
-        return super(CrateSchemaEditor, self).add_field(model, field)
+        return super(DatabaseSchemaEditor, self).add_field(model, field)
 
     def remove_field(self, model, field):
         raise NotImplementedError("removing fields is not implemented")
