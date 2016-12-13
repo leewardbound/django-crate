@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.9/ref/settings/
 """
 from __future__ import absolute_import
-import __builtin__
+try:
+    import __builtin__ as builtins
+except ImportError:
+    import builtins
 import os
 import sys
 import logging
@@ -23,7 +26,7 @@ IS_TEST = ('nosetests' in sys.argv[0] or
 
 def load_conf(cfg):
     try:
-        __builtin__.__import__('%s' % cfg, globals(), locals(), ['*'], -1)
+        builtins.__import__('%s' % cfg, globals(), locals(), ['*'], -1)
     except ImportError as e:
         log.warning('Not importing %s settings: %s'%(cfg, e))
 
