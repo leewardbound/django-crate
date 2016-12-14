@@ -3,6 +3,7 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
 
 class ModelMetaOptionRouter(object):
     """Allows each model to set its own destiny"""
+
     def db_for_read(self, model, **hints):
         return getattr(model._meta, 'in_db', None)
 
@@ -10,20 +11,17 @@ class ModelMetaOptionRouter(object):
         return getattr(model._meta, 'in_db', None)
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        from django.apps import apps
         if not model_name:
-            return True
-        try: model = apps.get_model(app_label, model_name)
-        except LookupError: return False
-        # Specify target database with field in_db in model's Meta class
+            # no model, no migration!
+            return False
+        try:
+            from django.apps import apps
+            model = apps.get_model(app_label, model_name)
+        except LookupError:
+            # hm. model does not exist?
+            return False
         if hasattr(model._meta, 'in_db'):
-            if model._meta.in_db == db:
-                return True
-            else:
-                return False
-        else:
-            # Random models that don't specify a database can only go to 'default'
-            if db == 'default' or model_name == 'Migrations':
-                return True
-            else:
-                return False
+            # allow if in_db matches database
+            return model._meta.in_db == db
+        # otherwise allow if 'default' database
+        return db == 'default'

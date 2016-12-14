@@ -9,17 +9,21 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('in_db',)
 
 
 class Author(models.Model):
+
     id = models.CharField(max_length=1024, primary_key=True, blank=True)
     name = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.name
+
     class Meta:
         in_db = 'crate'
 
+
 class Book(models.Model):
+
     id = models.CharField(max_length=1024, primary_key=True, blank=True)
-    author = models.ForeignKey(Author)
+    author = models.ForeignKey(Author, null=True)
     title = models.CharField(max_length=255, null=True, blank=True)
     description = models.CharField(max_length=255, null=True, blank=True)
     published = models.DateTimeField(default=datetime.now)

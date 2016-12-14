@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
                 ('pages', models.PositiveIntegerField(blank=True, null=True)),
                 ('extra', example.models.ObjectField()),
                 ('tags', example.models.StringArrayField()),
-                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='example.Author')),
+                ('author', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='example.Author', null=True)),
             ],
             options={
                 'in_db': 'crate',
