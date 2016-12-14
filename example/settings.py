@@ -101,7 +101,8 @@ DATABASES = {
     },
     'crate': {
         'ENGINE': 'django_crate.backend',
-        'SERVERS': ['localhost:4200',],
+        'HOST': 'localhost',
+        'PORT': 5432,
     },
 }
 
