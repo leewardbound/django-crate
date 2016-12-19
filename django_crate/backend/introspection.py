@@ -23,7 +23,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         db = self.connection.settings_dict['NAME'] or 'doc'
         cursor.execute(
             "select table_name from information_schema.tables "
-            "where schema_name='%s' order by table_name"%db)
+            "where table_schema='%s' order by table_name"%db)
         for table_name in cursor.fetchall():
             if isinstance(table_name, list):
                 table_name = table_name[0]
@@ -45,7 +45,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         indexes = {}
         cursor.execute(
             "select constraint_name from information_schema.table_constraints "
-            "where schema_name='doc' and table_name='{}'".format(table_name)
+            "where table_schema='doc' and table_name='{}'".format(table_name)
         )
         for constraints in cursor.fetchall():
             # only handle single column indices
@@ -61,7 +61,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         result = {}
         cursor.execute(
             "select constraint_name from information_schema.table_constraints "
-            "where schema_name='doc' and table_name='{}'".format(table_name)
+            "where table_schema='doc' and table_name='{}'".format(table_name)
         )
         for constraints in cursor.fetchall():
             constraint_name = "__".join([table_name] + constraints[0])
