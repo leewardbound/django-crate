@@ -14,7 +14,7 @@ DATABASES = {
         'ENGINE': 'django_crate.backend',
         'HOST': 'localhost',
         'PORT': 5432,
-        'NAME': None,
+        'NAME': 'doc',
     },
 }
 
