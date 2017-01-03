@@ -2,7 +2,7 @@
 
 import uuid
 from django.db.models.sql import compiler
-from .util import milliseconds
+from ..util import milliseconds
 from .creation import DatabaseCreation
 
 TYPES = DatabaseCreation.data_types
