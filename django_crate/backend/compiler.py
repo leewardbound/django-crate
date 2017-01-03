@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import uuid
+import time
 from django.db.models.sql import compiler
-from ..util import milliseconds
 from .creation import DatabaseCreation
 
 TYPES = DatabaseCreation.data_types
@@ -26,12 +26,21 @@ class SQLInsertCompiler(compiler.SQLInsertCompiler):
     def prepare_value(self, field, value):
         opts = self.query.get_meta()
         pk_field = opts.pk
-        if field == pk_field and not value:
-            _type = TYPES.get(field.get_internal_type(), None)
-            if _type == 'string':
+        _type = TYPES.get(field.get_internal_type(), None)
+        if field == pk_field and _type == 'string' and not value:
+            # Hackish / Necessary --
+            # For most models, the PK field will be a string, and we should
+            # set it to a random UUID.
+            #
+            # However, django migrations tries internally to marshal the ID to
+            # an integer, causing the UUID to fail as a really big integer;
+            # Summarily, and this is ugly but it works, for the migrations
+            # model, we use time.time()*1000 as PK.
+            #
+            if(opts.model_name != 'migration'):
                 value = uuid.uuid4()
             else:
-                raise Exception("Can't autopopulate primary key for type %s on " % (_type, field.model))
+                value = int(time.time()*1000)
 
         return super(SQLInsertCompiler, self).prepare_value(field, value)
 
