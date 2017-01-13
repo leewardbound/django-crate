@@ -3,6 +3,7 @@
 import json
 from django.core.exceptions import ImproperlyConfigured
 from django.db.backends.base.base import BaseDatabaseWrapper
+import six
 
 try:
     import psycopg2 as Database
@@ -113,16 +114,26 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             return True
 
 
+def convert_unicodes(s):
+    if isinstance(s, six.string_types):
+        return s.encode('utf-8').decode('latin-1')
+    return s
+
+def adapt(s):
+    return psycopg2.extensions.adapt(convert_unicodes(s))
+
+
 def adapt_dict(val):
-    as_crate = '{%s}'%', '.join(
-            '"%s" = %s'%(str(psycopg2.extensions.adapt(k))[1:-1], psycopg2.extensions.adapt(v))
-        for k, v in val.items()
-    )
+    parts = []
+    for k, v in val.items():
+        part = six.u('"%s" = %s')%(str(adapt(k))[1:-1], adapt(v))
+        parts.append(part)
+    as_crate = six.u('{%s}')%', '.join(parts)
     return psycopg2.extensions.AsIs(as_crate)
 psycopg2.extensions.register_adapter(dict, adapt_dict)
 
 
 def adapt_list(val):
-    as_crate = '[%s]'%', '.join(str(psycopg2.extensions.adapt(v)) for v in val)
+    as_crate = '[%s]'%', '.join(str(adapt(v)) for v in val)
     return psycopg2.extensions.AsIs(as_crate)
 psycopg2.extensions.register_adapter(list, adapt_list)
