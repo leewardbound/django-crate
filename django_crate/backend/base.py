@@ -126,6 +126,7 @@ def adapt(s):
 def adapt_dict(val):
     parts = []
     for k, v in val.items():
+        if k.startswith('_'): continue
         part = six.u('"%s" = %s')%(str(adapt(k))[1:-1], adapt(v))
         parts.append(part)
     as_crate = six.u('{%s}')%', '.join(parts)
