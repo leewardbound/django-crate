@@ -127,7 +127,9 @@ def adapt_dict(val):
     parts = []
     for k, v in val.items():
         if k.startswith('_'): continue
-        part = six.u('"%s" = %s')%(str(adapt(k))[1:-1], adapt(v))
+        if v is None: adapted = 'NULL'
+        else: adapted = adapt(v)
+        part = six.u('"%s" = %s')%(str(adapt(k))[1:-1], adapted)
         parts.append(part)
     as_crate = six.u('{%s}')%', '.join(parts)
     return psycopg2.extensions.AsIs(as_crate)
